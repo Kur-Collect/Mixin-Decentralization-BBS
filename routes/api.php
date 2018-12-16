@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,6 +12,14 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
+Route::middleware('auth:api')->namespace('Api')->group(function () {
+    Route::get('/', 'PostController@index');
+
+    Route::prefix('/post')->group(function () {
+        Route::get('/{trade_id}', 'PostController@show');
+        Route::post('/', 'PostController@store');
+        Route::patch('/{trade_id}', 'PostController@edit');
+        Route::delete('/{trade_id}', 'PostController@delete');
+    });
+
 });
