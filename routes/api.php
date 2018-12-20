@@ -1,6 +1,5 @@
 <?php
 
-
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -12,14 +11,19 @@
 |
 */
 
-Route::middleware('auth:api')->namespace('Api')->group(function () {
-    Route::get('/', 'PostController@index');
+$api = app('Dingo\Api\Routing\Router');
 
-    Route::prefix('/post')->group(function () {
-        Route::get('/{trade_id}', 'PostController@show');
-        Route::post('/', 'PostController@store');
-        Route::patch('/{trade_id}', 'PostController@edit');
-        Route::delete('/{trade_id}', 'PostController@delete');
+$api->version('v1', [
+    'namespace' => 'App\Http\Controllers\Api\V1',
+], function ($api) {
+    $api->get('/', 'PostController@index');
+
+    $api->group([
+        'prefix' => '/post'
+    ], function ($api) {
+        $api->get('/{trade_id}', 'PostController@show');
+        $api->post('/', 'PostController@store');
+        $api->patch('/{trade_id}', 'PostController@edit');
+        $api->delete('/{trade_id}', 'PostController@delete');
     });
-
 });
