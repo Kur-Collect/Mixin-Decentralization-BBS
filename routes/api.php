@@ -23,7 +23,7 @@ $api->version('v1', [
     ], function ($api) {
         $api->get('/{trade_id}', 'PostController@show');
         $api->post('/', 'PostController@store');
-        $api->patch('/{trade_id}', 'PostController@edit');
-        $api->delete('/{trade_id}', 'PostController@delete');
+        $api->patch('/{post}', 'PostController@edit');
+        $api->delete('/{post}', 'PostController@delete');
     });
 });
