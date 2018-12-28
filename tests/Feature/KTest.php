@@ -15,6 +15,7 @@ class KTest extends TestCase
      */
     public function test_i_can_test()
     {
-
+        $a = fetchMixinSDk()->wallet()->readUserSnapshots();
+        dd($a);
     }
 }

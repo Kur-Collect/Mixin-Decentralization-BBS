@@ -19,11 +19,11 @@ $api->version('v1', [
     $api->get('/', 'PostController@index');
 
     $api->group([
-        'prefix' => '/post'
+        'prefix' => '/posts'
     ], function ($api) {
-        $api->get('/{trade_id}', 'PostController@show');
+        $api->get('/{trace_id}', 'PostController@show');
         $api->post('/', 'PostController@store');
-        $api->patch('/{post}', 'PostController@edit');
-        $api->delete('/{post}', 'PostController@delete');
+        $api->patch('/{trace_id}', 'PostController@edit');
+        $api->delete('/{trace_id}', 'PostController@delete');
     });
 });

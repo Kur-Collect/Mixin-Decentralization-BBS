@@ -16,8 +16,6 @@ class CreatePostsTable extends Migration
         Schema::create('posts', function (Blueprint $table) {
             $table->increments('id');
             $table->string('trace_id')->index();
-            // 用来记录评论的第一个ID
-            $table->string('comment_trace_id')->index();
             $table->timestamps();
         });
     }

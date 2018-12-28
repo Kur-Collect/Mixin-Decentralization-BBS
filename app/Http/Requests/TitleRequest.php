@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use Dingo\Api\Exception\ValidationHttpException;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
 class TitleRequest extends FormRequest
@@ -13,7 +15,7 @@ class TitleRequest extends FormRequest
      */
     public function authorize()
     {
-        return false;
+        return true;
     }
 
     /**
@@ -24,7 +26,16 @@ class TitleRequest extends FormRequest
     public function rules()
     {
         return [
-            //
+            'title' => 'required|max:116',
         ];
+    }
+
+    /**
+     * @param \Illuminate\Contracts\Validation\Validator $validator
+     */
+    protected function failedValidation(Validator $validator)
+    {
+        throw (new ValidationHttpException($validator))
+            ->errorBag($this->errorBag);
     }
 }

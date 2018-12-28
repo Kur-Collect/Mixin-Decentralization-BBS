@@ -8,5 +8,11 @@
 
 return [
     // 接受者
-    'opponentId' => '17d1c125-aada-46b0-897d-3cb2a29eb011',
+    'opponentId'  => '17d1c125-aada-46b0-897d-3cb2a29eb011',
+    // 头部标示
+    'headMark'    => 'Title',
+    // 尾部标示
+    'tailMark'    => 'Tail',
+    // 评论标示
+    'commentMark' => 'Comment',
 ];
