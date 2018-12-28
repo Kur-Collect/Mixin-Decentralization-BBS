@@ -2,37 +2,60 @@
 
 namespace App\Jobs;
 
+use App\Services\PostService;
+use ExinOne\MixinSDK\Exceptions\MixinNetworkRequestException;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Ramsey\Uuid\Uuid;
 
 class StoreCommentJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $tailTraceId;
+    protected $headTraceId;
+    protected $postService;
+    protected $commentContent;
+    protected $user;
+
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct($tailTraceId)
+    public function __construct($headTraceId, $commentContent, $user = null)
     {
-        $this->tailTraceId = $tailTraceId;
+        $this->headTraceId    = $headTraceId;
+        $this->postService    = new PostService();
+        $this->commentContent = $commentContent;
+        $this->user           = $user;
 
         $this->onQueue('comment');
     }
 
-    /**
-     * Execute the job.
-     *
-     * @return void
-     */
+
     public function handle()
     {
-        //TODO
+        $tailTraceId = $this->postService->getTailTraceIdFromHeadTraceId($this->headTraceId, $this->postService);
+
+        $firstCommentTraceId = $this->postService->getAfterTimeUuid($tailTraceId, 2);
+
+        try {
+            $nextCommentTraceId = $firstCommentTraceId;
+            for (; ;) {
+                $res                = fetchMixinSDk()->wallet()->readTransfer($nextCommentTraceId);
+                $nextCommentTraceId = Uuid::fromBytes(base64_decode(substr($res['memo'], strlen($res['memo']) - 24, strlen($res['memo']) - 1)))->toString();
+            }
+        } catch (MixinNetworkRequestException $e) {
+            $memo = base64_encode(gzcompress($this->commentContent)) . Uuid::uuid4()->toString();
+
+            fetchMixinSDk()->wallet()->transfer(config('data.assetId.NXC'), '17d1c125-aada-46b0-897d-3cb2a29eb011', null, 0.01, $memo, $nextCommentTraceId);
+
+            return true;
+        }
+
 
     }
 }

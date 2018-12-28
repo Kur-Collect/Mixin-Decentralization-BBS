@@ -26,7 +26,7 @@ class PostService
      * @return array
      * @throws \Exception
      */
-    public function formatContent($content, $title = 'default', $headTraceId = null, $tailTraceId = null, $addTailNode = true)
+    public function formatContent($content, $title = null, $headTraceId = null, $tailTraceId = null, $addTailNode = true)
     {
         $traceIds    = [empty($headTraceId) ? Uuid::uuid4()->toString() : $headTraceId];
         $tailTraceId = empty($tailTraceId) ? Uuid::uuid4()->toString() : $tailTraceId;
@@ -35,10 +35,12 @@ class PostService
         $contentArray       = str_split($compressionContent, 140 - 24);
 
         // 填充 头部标示
-        array_unshift($contentArray,
-            config('runtime.headMark').base64_encode(Uuid::fromString($tailTraceId)->getBytes()),
-            $title
-        );
+        if (empty($title)) {
+            array_unshift($contentArray,
+                config('runtime.headMark') . base64_encode(Uuid::fromString($tailTraceId)->getBytes()),
+                $title
+            );
+        }
 
         // 是否添加评论节点
         if ($addTailNode) {
@@ -56,7 +58,7 @@ class PostService
                 : Uuid::uuid4();
 
             $traceIds[] = $uuid->toString();
-            $memo       = $content.base64_encode($uuid->getBytes());
+            $memo       = $content . base64_encode($uuid->getBytes());
 
             fetchMixinSDk()->wallet()->transfer(config('data.assetId.NXC'), '17d1c125-aada-46b0-897d-3cb2a29eb011', null, 0.01, $memo, $traceIds[$k]);
         }
@@ -73,9 +75,22 @@ class PostService
     {
         $res = fetchMixinSDk()->wallet()->readTransfer($trade_id);
 
-        return preg_match('/'.config('runtime.headMark').'.+/', $res['memo'])
+        return preg_match('/' . config('runtime.headMark') . '.+/', $res['memo'])
             ? $res
             : false;
+    }
+
+    /**
+     * @param             $traceId
+     * @param PostService $postService
+     *
+     * @return string
+     */
+    public function getTailTraceIdFromHeadTraceId($traceId, PostService $postService)
+    {
+        $res = $postService->headNodeVerify($traceId);
+
+        return $postService->getInterceptUuidSegment(str_replace(config('runtime.headMark'), $res['memo'], ''), 0);
     }
 
     /**
@@ -89,12 +104,18 @@ class PostService
         return Uuid::fromBytes(substr($str, 24 * $segment, 24))->toString();
     }
 
+    /**
+     * @param     $traceId
+     * @param int $time
+     *
+     * @return string
+     */
     public function getAfterTimeUuid($traceId, $time = 1)
     {
         $nextUuid = $traceId;
         for ($i = 0; $i < $time; ++$i) {
-            $res = fetchMixinSDk()->wallet()->readTransfer($nextUuid);
-            $nextUuid=Uuid::fromBytes(base64_decode(substr($res['memo'], strlen($res['memo']) - 24, strlen($res['memo']) - 1)))->toString();
+            $res      = fetchMixinSDk()->wallet()->readTransfer($nextUuid);
+            $nextUuid = Uuid::fromBytes(base64_decode(substr($res['memo'], strlen($res['memo']) - 24, strlen($res['memo']) - 1)))->toString();
         }
 
         return $nextUuid;
