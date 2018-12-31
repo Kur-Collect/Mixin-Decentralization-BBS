@@ -13,54 +13,34 @@ use Ramsey\Uuid\Uuid;
 class PostService
 {
     // 塞入内容和标题后,生成每个下一段的UUID,将内容全部返回
-    // headTraceId 是头部写Mark标示那个区块的TraceId
-    // tailTranceId 是尾部区块写Mark标示的那个ID
+    // headTraceId 是头部写Mark标示那个区块的 TraceId
+    // tailTranceId 是尾部区块写Mark标示的那个 ID
     // 头部区块中会写入尾部区块的TraceID和下一个区块的TraceID
     /**
-     * @param        $content
-     * @param string $title
-     * @param null   $headTraceId
-     * @param null   $tailTraceId
-     * @param bool   $addTailNode
+     * @param $text
      *
      * @return array
      * @throws \Exception
      */
-    public function formatContent($content, $title = null, $headTraceId = null, $tailTraceId = null, $addTailNode = true)
+    public function formatText($text)
     {
-        $traceIds    = [empty($headTraceId) ? Uuid::uuid4()->toString() : $headTraceId];
-        $tailTraceId = empty($tailTraceId) ? Uuid::uuid4()->toString() : $tailTraceId;
+        $traceIds = [Uuid::uuid4()->toString()];
 
-        $compressionContent = base64_encode(gzcompress($content));
+        $compressionContent = base64_encode(gzcompress($text));
         $contentArray       = str_split($compressionContent, 140 - 24);
 
-        // 填充 头部标示
-        if (empty($title)) {
-            array_unshift($contentArray,
-                config('runtime.headMark') . base64_encode(Uuid::fromString($tailTraceId)->getBytes()),
-                $title
-            );
-        }
+        foreach ($contentArray as $k => $text) {
+            $uuidObj = Uuid::uuid4();
 
-        // 是否添加评论节点
-        if ($addTailNode) {
-            // 填充尾部标示和评论标示
-            array_push($contentArray,
-                config('runtime.tailMark'),
-                config('runtime.commentMark')
-            );
-        }
+            if ($k == count($contentArray) - 1) {
+                $traceIds[] = $uuidObj->toString();
+                $memo       = $text . base64_encode($uuidObj->getBytes());
+            } else {
+                $traceIds[] = str_repeat('Z', 24);
+                $memo       = $text . str_repeat('Z', 24);
+            }
 
-        foreach ($contentArray as $k => $content) {
-            // 读取尾部 TraceID
-            $uuid = ($k == count($contentArray - 3))
-                ? $uuid = Uuid::fromString($tailTraceId)
-                : Uuid::uuid4();
-
-            $traceIds[] = $uuid->toString();
-            $memo       = $content . base64_encode($uuid->getBytes());
-
-            fetchMixinSDk()->wallet()->transfer(config('data.assetId.NXC'), '17d1c125-aada-46b0-897d-3cb2a29eb011', null, 0.01, $memo, $traceIds[$k]);
+            fetchMixinSDk()->wallet()->transfer(config('data.assetId.NXC'), config('runtime.opponentId'), null, 0.00001, $memo, $traceIds[$k]);
         }
 
         return $traceIds;
@@ -119,5 +99,23 @@ class PostService
         }
 
         return $nextUuid;
+    }
+
+    public function readTitleWithHeadTraceId(string $traceId)
+    {
+
+
+    }
+
+    public function readContentWithHeadTraceId(string $traceId)
+    {
+
+
+    }
+
+    public function readCommentWithHeadTraceId(string $traceId)
+    {
+
+
     }
 }

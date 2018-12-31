@@ -22,16 +22,17 @@ class PostController extends Controller
     }
 
     /**
-     * @param Request $request
+     * @param             $traceId
+     * @param PostService $postService
      *
-     * @return string
-     * TODO 网络请求需要推入队列
+     * @return \Illuminate\Http\JsonResponse|mixed
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
     public function show($traceId, PostService $postService)
     {
         $res = $postService->headNodeVerify($traceId);
 
-        if (! $res) {
+        if (!$res) {
             return $this->failed(400, 0, 'isn\'t a head node');
         }
 
@@ -88,13 +89,19 @@ class PostController extends Controller
      */
     public function store(PostRequest $request, PostService $postService)
     {
-        $title   = $request->input('title');
-        $content = $request->input('content');
+        [$title, $content] = [$request->input('title'), $request->input('content')];
+        [$titleIds, $contentIds] = [$postService->formatText($title), $postService->formatText($content)];
 
-        $traceIds = $postService->formatContent($content, $title);
+        // 随机生成一个 Comment Chain
+        $commentId = Uuid::uuid4()->toString();
+
+        $memo = config('runtime.headMark') . uuid2Bytes2Base64($titleIds[0]) . uuid2Bytes2Base64($contentIds[0]) . uuid2Bytes2Base64($commentId);
+
+        // 生成 HEAD Chain
+        $headInfo = fetchMixinSDk()->wallet()->transfer(config('data.assetId.NXC'), config('runtime.opponentId'), null, 0.00001, $memo);
 
         $post = Post::create([
-            'trace_id' => $traceIds[0],
+            'head_trace_id' => $headInfo['trace_id'],
         ]);
 
         return $this->response->item($post, new PostTransformer());
@@ -111,8 +118,7 @@ class PostController extends Controller
     public function edit($traceId, PostRequest $request, PostService $postService)
     {
         $res = $postService->headNodeVerify($traceId);
-
-        if (! $res) {
+        if (!$res) {
             return $this->failed(400, 0, 'isn\'t a head node');
         }
 

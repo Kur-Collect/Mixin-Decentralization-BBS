@@ -15,7 +15,7 @@ class CreatePostsTable extends Migration
     {
         Schema::create('posts', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('trace_id')->index();
+            $table->string('head_trace_id')->index();
             $table->timestamps();
         });
     }
