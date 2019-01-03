@@ -1,1 +1,1 @@
-# Mixin Network BBS
+# Mixin Decentralization BBS
