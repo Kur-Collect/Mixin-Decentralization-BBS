@@ -31,50 +31,19 @@ class PostController extends Controller
     public function show($traceId, PostService $postService)
     {
         $res = $postService->headNodeVerify($traceId);
-
         if (!$res) {
             return $this->failed(400, 0, 'isn\'t a head node');
         }
 
-        $tailTraceId = $postService->getInterceptUuidSegment(str_replace(config('runtime.headMark'), $res['memo'], ''), 0);
+        $memoUuid = str_replace(config('runtime.headMark'), '', $res['memo']);
 
-        $response = [
-            'title'   => '',
-            'content' => '',
-            'comment' => [],
+        $data = [
+            'title'   => Uuid::fromBytes(base64_decode($postService->getInterceptUuidSegment($memoUuid,0)))->toString(),
+            'content' => Uuid::fromBytes(base64_decode($postService->getInterceptUuidSegment($memoUuid,1)))->toString(),
+            'comment' => Uuid::fromBytes(base64_decode($postService->getInterceptUuidSegment($memoUuid,2)))->toString(),
         ];
 
-        // 读取 Title
-        $titleMemo         = fetchMixinSDk()->wallet()->readTransfer(substr($res['memo'], strlen($res['memo']) - 24, strlen($res['memo']) - 1))['memo'];
-        $response['title'] = substr($titleMemo['memo'], 0, strlen($titleMemo['memo']) - 24);
-
-        // 读取 content
-        $contentStartId = substr($titleMemo['memo'], strlen($titleMemo['memo']) - 24, strlen($titleMemo['memo']) - 1);
-        for (; ;) {
-            $res = fetchMixinSDk()->wallet()->readTransfer($contentStartId);
-            dump($res);
-            $encodeTraceId        = substr($res['memo'], strlen($res['memo']) - 24, strlen($res['memo']) - 1);
-            $response ['content'] .= substr($res['memo'], 0, strlen($res['memo']) - 24);
-            $traceId              = Uuid::fromBytes(base64_decode($encodeTraceId))->toString();
-
-            if ($traceId == $tailTraceId) {
-                break;
-            }
-        }
-
-        // 读取 comment
-        $commentUuid = $postService->getAfterTimeUuid($tailTraceId, 2);
-
-        try {
-            for (; ;) {
-                $res                  = fetchMixinSDk()->wallet()->readTransfer($commentUuid);
-                $encodeTraceId        = substr($res['memo'], strlen($res['memo']) - 24, strlen($res['memo']) - 1);
-                $response ['content'] .= substr($res['memo'], 0, strlen($res['memo']) - 24);
-                $commentUuid          = Uuid::fromBytes(base64_decode($encodeTraceId))->toString();
-            }
-        } catch (MixinNetworkRequestException $e) {
-            return $this->success($response);
-        }
+        return $this->success($data);
     }
 
     /**
@@ -89,16 +58,18 @@ class PostController extends Controller
      */
     public function store(PostRequest $request, PostService $postService)
     {
-        [$title, $content] = [$request->input('title'), $request->input('content')];
-        [$titleIds, $contentIds] = [$postService->formatText($title), $postService->formatText($content)];
+        [$titleIds, $contentIds] = [
+            $postService->formatText($request->input('title')),
+            $postService->formatText($request->input('content'))
+        ];
 
         // 随机生成一个 Comment Chain
         $commentId = Uuid::uuid4()->toString();
 
-        $memo = config('runtime.headMark') . uuid2Bytes2Base64($titleIds[0]) . uuid2Bytes2Base64($contentIds[0]) . uuid2Bytes2Base64($commentId);
+        $headMemo = config('runtime.headMark') . uuid2Bytes2Base64($titleIds[0]) . uuid2Bytes2Base64($contentIds[0]) . uuid2Bytes2Base64($commentId);
 
         // 生成 HEAD Chain
-        $headInfo = fetchMixinSDk()->wallet()->transfer(config('data.assetId.NXC'), config('runtime.opponentId'), null, 0.00001, $memo);
+        $headInfo = fetchMixinSDk()->wallet()->transfer(config('data.assetId.NXC'), config('runtime.opponentId'), null, 0.00001, $headMemo);
 
         $post = Post::create([
             'head_trace_id' => $headInfo['trace_id'],
@@ -122,35 +93,41 @@ class PostController extends Controller
             return $this->failed(400, 0, 'isn\'t a head node');
         }
 
-        $tailTraceId = $postService->getInterceptUuidSegment(str_replace(config('runtime.headMark'), $res['memo'], ''), 0);
+        // 取得 Head Node
+        $memoUuid = str_replace(config('runtime.headMark'), '', $res['memo']);
 
-        $title   = $request->input('title');
-        $content = $request->input('content');
+        $commentId = Uuid::fromBytes(base64_decode($postService->getInterceptUuidSegment($memoUuid, 2)))->toString();
 
-        $traceIds = $postService->formatContent($content, $title, null, $tailTraceId, false);
+        [$titleIds, $contentIds] = [
+            $postService->formatText($request->input('title')),
+            $postService->formatText($request->input('content'))
+        ];
 
-        $post = Post::where('trace_id', $traceId)->first();
+        $headMemo = config('runtime.headMark') . uuid2Bytes2Base64($titleIds[0]) . uuid2Bytes2Base64($contentIds[0]) . uuid2Bytes2Base64($commentId);
 
-        $post = $post->update([
-            'trace_id'         => $traceIds[0],
-            'comment_trace_id' => $traceIds[count($traceIds) - 1],
+        // 生成 HEAD Chain
+        $headInfo = fetchMixinSDk()->wallet()->transfer(config('data.assetId.NXC'), config('runtime.opponentId'), null, 0.00001, $headMemo);
+
+        $post = Post::create([
+            'head_trace_id' => $headInfo['trace_id'],
         ]);
 
         return $this->response->item($post, new PostTransformer());
     }
 
     /**
-     * @param                           $traceId
-     * @param \App\Services\PostService $postService
+     * @param             $traceId
+     * @param PostService $postService
      *
      * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
     public function delete($traceId, PostService $postService)
     {
         if ($postService->headNodeVerify($traceId)) {
             return $this->failed(400, 0, 'isn\'t a head node');
         }
-        $post = Post::where('posts', $traceId)->firstOrFail();
+        $post = Post::where('head_trace_id', $traceId)->firstOrFail();
 
         return $post->delete();
     }

@@ -35,12 +35,16 @@ class StoreCommentJob implements ShouldQueue
         $this->onQueue('comment');
     }
 
-
+    /**
+     * @return bool
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
+     */
     public function handle()
     {
-        $tailTraceId = $this->postService->getTailTraceIdFromHeadTraceId($this->headTraceId, $this->postService);
+        $res = fetchMixinSDk()->wallet()->readTransfer($this->headTraceId);
+        $memoUuid = str_replace(config('runtime.headMark'), '', $res['memo']);
 
-        $firstCommentTraceId = $this->postService->getAfterTimeUuid($tailTraceId, 2);
+        $firstCommentTraceId = Uuid::fromBytes(base64_decode($this->postService->getInterceptUuidSegment($memoUuid, 2)))->toString();
 
         try {
             $nextCommentTraceId = $firstCommentTraceId;
@@ -55,7 +59,5 @@ class StoreCommentJob implements ShouldQueue
 
             return true;
         }
-
-
     }
 }

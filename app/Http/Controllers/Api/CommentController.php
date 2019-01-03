@@ -15,32 +15,19 @@ class CommentController extends Controller
      * @param PostService $postService
      *
      * @return \Illuminate\Http\JsonResponse|mixed
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
     public function show($traceId, PostService $postService)
     {
         $res = $postService->headNodeVerify($traceId);
-
         if (!$res) {
             return $this->failed(400, 0, 'isn\'t a head node');
         }
 
-        $tailTraceId = $postService->getInterceptUuidSegment(str_replace(config('runtime.headMark'), $res['memo'], ''), 0);
+        $memoUuid = str_replace(config('runtime.headMark'), '', $res['memo']);
 
-        // 然后跳过两个块取得第一个 Comment 的traceId
-        $commentUuid = $postService->getAfterTimeUuid($tailTraceId, 2);
-
-        $response = [];
-
-        try {
-            for (; ;) {
-                $res                  = fetchMixinSDk()->wallet()->readTransfer($commentUuid);
-                $encodeTraceId        = substr($res['memo'], strlen($res['memo']) - 24, strlen($res['memo']) - 1);
-                $response ['content'] .= substr($res['memo'], 0, strlen($res['memo']) - 24);
-                $commentUuid          = Uuid::fromBytes(base64_decode($encodeTraceId))->toString();
-            }
-        } catch (MixinNetworkRequestException $e) {
-            return $this->success($response);
-        }
+        $commentTraceId = Uuid::fromBytes(base64_decode($postService->getInterceptUuidSegment($memoUuid, 2)))->toString();
+        return $this->success(compact('commentTraceId'));
     }
 
     /**
@@ -49,11 +36,11 @@ class CommentController extends Controller
      * @param PostService    $postService
      *
      * @return \Illuminate\Http\JsonResponse
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
     public function store($traceId, CommentRequest $request, PostService $postService)
     {
         $res = $postService->headNodeVerify($traceId);
-
         if (!$res) {
             return $this->failed(400, 0, 'isn\'t a head node');
         }

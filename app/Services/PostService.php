@@ -49,7 +49,8 @@ class PostService
     /**
      * @param $trade_id
      *
-     * @return false|int
+     * @return array|bool
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
     public function headNodeVerify($trade_id)
     {
@@ -65,6 +66,7 @@ class PostService
      * @param PostService $postService
      *
      * @return string
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
     public function getTailTraceIdFromHeadTraceId($traceId, PostService $postService)
     {
@@ -89,17 +91,18 @@ class PostService
      * @param int $time
      *
      * @return string
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
-    public function getAfterTimeUuid($traceId, $time = 1)
-    {
-        $nextUuid = $traceId;
-        for ($i = 0; $i < $time; ++$i) {
-            $res      = fetchMixinSDk()->wallet()->readTransfer($nextUuid);
-            $nextUuid = Uuid::fromBytes(base64_decode(substr($res['memo'], strlen($res['memo']) - 24, strlen($res['memo']) - 1)))->toString();
-        }
-
-        return $nextUuid;
-    }
+//    public function getAfterTimeUuid($traceId, $time = 1)
+//    {
+//        $nextUuid = $traceId;
+//        for ($i = 0; $i < $time; ++$i) {
+//            $res      = fetchMixinSDk()->wallet()->readTransfer($nextUuid);
+//            $nextUuid = Uuid::fromBytes(base64_decode(substr($res['memo'], strlen($res['memo']) - 24, strlen($res['memo']) - 1)))->toString();
+//        }
+//
+//        return $nextUuid;
+//    }
 
     public function readTitleWithHeadTraceId(string $traceId)
     {
