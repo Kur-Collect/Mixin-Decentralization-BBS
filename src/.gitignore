@@ -12,6 +12,5 @@ yarn-error.log
 composer.lock
 
 .idea
-_ide_helper.php
 mixinbbs.cc.conf
 storage/pem

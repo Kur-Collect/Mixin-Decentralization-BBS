@@ -20,7 +20,7 @@ $api->version('v1', [
         ->name('api.post.index');
 
     $api->group([
-        'prefix' => '/posts'
+        'prefix' => '/posts',
     ], function ($api) {
         $api->get('/{traceId}', 'PostController@show')
             ->name('api.post.show');
@@ -36,5 +36,4 @@ $api->version('v1', [
         $api->patch('/{traceId}/comment', 'CommentController@store')
             ->name('api.comment.store');
     });
-
 });
