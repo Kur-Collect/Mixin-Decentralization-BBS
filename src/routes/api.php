@@ -16,12 +16,13 @@ $api = app('Dingo\Api\Routing\Router');
 $api->version('v1', [
     'namespace' => 'App\Http\Controllers\Api\V1',
 ], function ($api) {
-    $api->get('/', 'PostController@index')
-        ->name('api.post.index');
+
 
     $api->group([
         'prefix' => '/posts',
     ], function ($api) {
+        $api->get('/', 'PostController@index')
+            ->name('api.post.index');
         $api->get('/{traceId}', 'PostController@show')
             ->name('api.post.show');
         $api->post('/', 'PostController@store')

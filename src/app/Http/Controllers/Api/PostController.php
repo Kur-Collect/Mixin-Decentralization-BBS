@@ -18,7 +18,7 @@ class PostController extends Controller
      */
     public function index()
     {
-        return $this->response->paginator(Post::all()->paginate(100), new PostTransformer());
+        return $this->response->paginator(Post::paginate(2), new PostTransformer());
     }
 
     /**
@@ -38,9 +38,9 @@ class PostController extends Controller
         $memoUuid = str_replace(config('runtime.headMark'), '', $res['memo']);
 
         $data = [
-            'title'   => Uuid::fromBytes(base64_decode($postService->getInterceptUuidSegment($memoUuid,0)))->toString(),
-            'content' => Uuid::fromBytes(base64_decode($postService->getInterceptUuidSegment($memoUuid,1)))->toString(),
-            'comment' => Uuid::fromBytes(base64_decode($postService->getInterceptUuidSegment($memoUuid,2)))->toString(),
+            'title'   => $postService->getInterceptUuidSegment($memoUuid, 0),
+            'content' => $postService->getInterceptUuidSegment($memoUuid, 1),
+            'comment' => $postService->getInterceptUuidSegment($memoUuid, 2),
         ];
 
         return $this->success($data);
@@ -58,10 +58,8 @@ class PostController extends Controller
      */
     public function store(PostRequest $request, PostService $postService)
     {
-        [$titleIds, $contentIds] = [
-            $postService->formatText($request->input('title')),
-            $postService->formatText($request->input('content'))
-        ];
+        $titleIds   = $postService->formatText($request->input('title'));
+        $contentIds = $postService->formatText($request->input('content'));
 
         // 随机生成一个 Comment Chain
         $commentId = Uuid::uuid4()->toString();

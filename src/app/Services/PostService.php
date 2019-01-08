@@ -8,6 +8,7 @@
 
 namespace App\Services;
 
+use function GuzzleHttp\Psr7\str;
 use Ramsey\Uuid\Uuid;
 
 class PostService
@@ -32,12 +33,12 @@ class PostService
         foreach ($contentArray as $k => $text) {
             $uuidObj = Uuid::uuid4();
 
-            if ($k == count($contentArray) - 1) {
-                $traceIds[] = $uuidObj->toString();
-                $memo       = $text . base64_encode($uuidObj->getBytes());
-            } else {
+            if ($k == (count($contentArray) - 1)) {
                 $traceIds[] = str_repeat('Z', 24);
                 $memo       = $text . str_repeat('Z', 24);
+            } else {
+                $traceIds[] = $uuidObj->toString();
+                $memo       = $text . base64_encode($uuidObj->getBytes());
             }
 
             fetchMixinSDk()->wallet()->transfer(config('data.assetId.NXC'), config('runtime.opponentId'), null, 0.00001, $memo, $traceIds[$k]);
@@ -62,20 +63,6 @@ class PostService
     }
 
     /**
-     * @param             $traceId
-     * @param PostService $postService
-     *
-     * @return string
-     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
-     */
-    public function getTailTraceIdFromHeadTraceId($traceId, PostService $postService)
-    {
-        $res = $postService->headNodeVerify($traceId);
-
-        return $postService->getInterceptUuidSegment(str_replace(config('runtime.headMark'), $res['memo'], ''), 0);
-    }
-
-    /**
      * @param string $str
      * @param        $segment
      *
@@ -83,42 +70,34 @@ class PostService
      */
     public function getInterceptUuidSegment(string $str, $segment)
     {
-        return Uuid::fromBytes(substr($str, 24 * $segment, 24))->toString();
+        return Uuid::fromBytes(base64_decode(substr($str, 24 * $segment, 24)))->toString();
     }
 
     /**
-     * @param     $traceId
-     * @param int $time
+     * @param string $traceId
      *
      * @return string
      * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
-//    public function getAfterTimeUuid($traceId, $time = 1)
-//    {
-//        $nextUuid = $traceId;
-//        for ($i = 0; $i < $time; ++$i) {
-//            $res      = fetchMixinSDk()->wallet()->readTransfer($nextUuid);
-//            $nextUuid = Uuid::fromBytes(base64_decode(substr($res['memo'], strlen($res['memo']) - 24, strlen($res['memo']) - 1)))->toString();
-//        }
-//
-//        return $nextUuid;
-//    }
-
-    public function readTitleWithHeadTraceId(string $traceId)
+    public function getContentToTail(string $traceId)
     {
+        $content = '';
+        for (; ;) {
+            $memo        = fetchMixinSDk()->wallet()->readTransfer($traceId)['memo'];
+            $contentPart = substr($memo, 0, strlen($memo) - 24);
+            $content     .= $contentPart;
+            dump($memo, $content);
 
+            $base64Uuid = substr($memo, strlen($memo) - 24, 24);
 
+            if ($base64Uuid == str_repeat('Z', 24)) {
+                break;
+            }
+
+            $traceId = Uuid::fromBytes(base64_decode($base64Uuid))->toString();
+        }
+
+        return gzuncompress(base64_decode($content));
     }
 
-    public function readContentWithHeadTraceId(string $traceId)
-    {
-
-
-    }
-
-    public function readCommentWithHeadTraceId(string $traceId)
-    {
-
-
-    }
 }
