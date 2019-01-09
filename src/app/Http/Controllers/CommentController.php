@@ -6,17 +6,13 @@ use Illuminate\Http\Request;
 
 class CommentController extends Controller
 {
-
     public function show($traceId)
     {
-        $response = $this->api->get('/posts/' . $traceId.'/comment');
-        
+        $response = $this->api->get('/posts/'.$traceId.'/comment');
     }
 
-    public function store($traceId)
+    public function store($traceId, Request $request)
     {
-        $response = $this->api->patch('/posts/' . $traceId.'/comment');
-        
+        $response = $this->api->patch('/posts/'.$traceId.'/comment');
     }
-
 }

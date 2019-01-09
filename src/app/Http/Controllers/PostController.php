@@ -8,15 +8,21 @@ use Illuminate\Http\Request;
 class PostController extends Controller
 {
     /**
-     * @param Request $request
+     * @param \Illuminate\Http\Request  $request
+     * @param \App\Services\PostService $postService
      *
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
-    public function index(Request $request)
+    public function index(Request $request,PostService $postService)
     {
         $response = $this->api->get('/posts/', ['page' => $request->input('page')]);
+        $titles = [];
+        foreach ($response as $post) {
+            $titles[]=$postService->getContentToTail($response['data']['title']);
+        }
 
-        return view('post.index', compact('response'));
+        return view('post.index', compact('response','titles'));
 
     }
 

@@ -8,7 +8,8 @@
     <title>index</title>
 </head>
 <body>
-<h1>Mixin-Decentralization-BBS</h1>
+<a href="{{config('app.url')}}"><h1>Mixin-Decentralization-BBS</h1></a>
+<hr/>
 @yield('content')
 
 </body>

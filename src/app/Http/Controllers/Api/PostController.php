@@ -18,7 +18,7 @@ class PostController extends Controller
      */
     public function index()
     {
-        return $this->response->paginator(Post::paginate(2), new PostTransformer());
+        return $this->response->paginator(Post::paginate(5), new PostTransformer());
     }
 
     /**
