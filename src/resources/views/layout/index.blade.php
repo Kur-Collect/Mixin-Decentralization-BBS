@@ -8,6 +8,8 @@
     <title>index</title>
 </head>
 <body>
+<h1>Mixin-Decentralization-BBS</h1>
+@yield('content')
 
 </body>
 </html>
